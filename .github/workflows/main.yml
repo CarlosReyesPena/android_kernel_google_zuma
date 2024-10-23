@@ -20,10 +20,7 @@ jobs:
 
     - name: Compile the kernel inside Docker
       run: |
-        docker run --rm -v ${{ github.workspace }}:/kernel -w /kernel kernel-builder /bin/bash -c "
-          make O=out zuma_defconfig &&
-          make O=out -j$(nproc)
-        "
+        docker run --rm -v ${{ github.workspace }}:/kernel -w /kernel kernel-builder /bin/bash -c "make O=out zuma_defconfig && make O=out -j\$(nproc)"
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
