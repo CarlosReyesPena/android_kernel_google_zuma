@@ -1,4 +1,4 @@
-name: Build Kernel
+name: Build Kernel with Docker
 
 on:
   push:
@@ -14,29 +14,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install dependencies
+    - name: Build Docker image
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          bc \
-          flex \
-          bison \
-          libssl-dev \
-          libncurses5-dev \
-          clang \
-          lld \
-          git \
-          gcc-aarch64-linux-gnu \
-          gcc-arm-linux-gnueabi
+        docker build -t kernel-builder .
 
-    - name: Build defconfig
+    - name: Compile the kernel inside Docker
       run: |
-        make O=out ARCH=arm64 LLVM=1 zuma_defconfig
-
-    - name: Compile the kernel
-      run: |
-        make O=out ARCH=arm64 LLVM=1 -j$(nproc) V=1 2>&1 | tee build.log
+        docker run --rm -v ${{ github.workspace }}:/kernel -w /kernel kernel-builder /bin/bash -c "
+          make O=out zuma_defconfig &&
+          make O=out -j$(nproc)
+        "
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -44,4 +31,3 @@ jobs:
         name: Kernel Build
         path: |
           out/arch/arm64/boot/Image.gz-dtb
-          build.log
