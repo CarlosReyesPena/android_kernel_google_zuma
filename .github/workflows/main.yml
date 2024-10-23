@@ -14,28 +14,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build Docker image
+      - name: Install Dependencies
         run: |
-          docker build -t android-kernel-builder .
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev bison flex libssl-dev bc ccache
 
-      - name: Run Docker container and build kernel
+      - name: Set up Environment Variables
         run: |
-          docker run --name kernel-build-container android-kernel-builder
+          export PATH="/home/runner/toolchains/gcc/bin:${PATH}"
+          export CROSS_COMPILE="aarch64-linux-gnu-"
+          export ARCH="arm64"
 
-      - name: Copy build artifacts
+      - name: Download Toolchains
         run: |
-          docker cp kernel-build-container:/kernel/out Image.gz-dtb
+          mkdir -p /home/runner/toolchains
+          git clone --depth=1 https://android.googlesource.com/platform/prebuilts/gas/linux-x86 /home/runner/toolchains/gcc
 
-      - name: Remove Docker container
+      - name: Build Kernel
         run: |
-          docker rm kernel-build-container
+          make O=out zuma_defconfig
+          make O=out -j$(nproc)
 
-      - name: Upload artifacts
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: Kernel
           path: |
-            Image.gz-dtb
+            out/arch/arm64/boot/Image.gz-dtb
             out/**/*.ko
             out/vmlinux
             out/System.map
