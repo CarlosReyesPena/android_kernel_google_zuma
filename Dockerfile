@@ -1,38 +1,36 @@
-# Utiliser une image Debian stable comme base
-FROM debian:stable
+# Étape 1 : Utiliser Debian comme base et ajouter les sources deb-src
+FROM debian:stable AS deb-src
 
-# Mettre à jour les sources et installer les dépendances
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    bc \
-    flex \
-    bison \
-    libssl-dev \
-    libncurses5-dev \
-    git \
-    clang \
-    lld \
-    gcc \
-    wget \
-    cpio \
-    unzip \
-    zip \
-    openssh-client \
-    ca-certificates \
-    python3
+RUN echo "deb http://deb.debian.org/debian stable main" > /etc/apt/sources.list && \
+    echo "deb-src http://deb.debian.org/debian stable main" >> /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian-security stable-security main" >> /etc/apt/sources.list && \
+    echo "deb-src http://deb.debian.org/debian-security stable-security main" >> /etc/apt/sources.list && \
+    echo "deb http://deb.debian.org/debian stable-updates main" >> /etc/apt/sources.list && \
+    echo "deb-src http://deb.debian.org/debian stable-updates main" >> /etc/apt/sources.list
 
-# Installer les compilateurs croisés pour aarch64
-RUN apt-get install -y gcc-aarch64-linux-gnu
+# Étape 2 : Installer les dépendances de compilation
+FROM deb-src AS install-dependency
 
-# Définir les variables d'environnement nécessaires
-ENV ARCH=arm64
-ENV SUBARCH=arm64
-ENV CROSS_COMPILE=aarch64-linux-gnu-
-ENV CC=clang
-ENV LD=ld.lld
+RUN apt-get update && \
+    apt-get install -y build-essential wget git bc flex bison libssl-dev libncurses5-dev \
+                       clang lld gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi cpio unzip zip \
+                       python3 libelf-dev libunwind-dev && \
+    apt-get build-dep -y linux
 
-# Définir le répertoire de travail
+# Étape 3 : Copier le code source du noyau dans le conteneur
+FROM install-dependency AS builder
+
 WORKDIR /kernel
 
-# Copier le code source du noyau dans le conteneur
 COPY . /kernel
+
+# Étape 4 : Compiler le noyau
+RUN make O=out zuma_defconfig && \
+    make O=out -j$(nproc)
+
+# Étape 5 : Préparer les artéfacts
+RUN mkdir /artifacts && \
+    cp out/arch/arm64/boot/Image.gz-dtb /artifacts/
+
+# Étape 6 : Définir le point d'entrée
+CMD ["bash"]
