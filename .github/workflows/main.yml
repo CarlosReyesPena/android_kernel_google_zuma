@@ -1,4 +1,4 @@
-name: Build Kernel with Docker
+name: Build Android Kernel
 
 on:
   push:
@@ -11,20 +11,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
 
-    - name: Build Docker image
-      run: |
-        docker build -t kernel-builder .
+      - name: Build Docker image
+        run: |
+          docker build -t android-kernel-builder .
 
-    - name: Compile the kernel inside Docker
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/kernel -w /kernel kernel-builder /bin/bash -c "make O=out zuma_defconfig && make O=out -j\$(nproc)"
+      - name: Run Docker container and build kernel
+        run: |
+          docker run -d --name kernel-build-container android-kernel-builder
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: Kernel Build
-        path: |
-          out/arch/arm64/boot/Image.gz-dtb
+      - name: Wait for the build to finish
+        run: |
+          docker wait kernel-build-container
+
+      - name: Copy artifacts from Docker container
+        run: |
+          docker cp kernel-build-container:/artifacts ${{ github.workspace }}
+
+      - name: Remove Docker container
+        run: |
+          docker rm kernel-build-container
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Kernel
+          path: artifacts/*
