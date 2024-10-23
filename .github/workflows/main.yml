@@ -30,30 +30,13 @@ jobs:
           gcc-aarch64-linux-gnu \
           gcc-arm-linux-gnueabi
 
-    - name: Set up environment variables
-      run: |
-        echo "ARCH=arm64" >> $GITHUB_ENV
-        echo "SUBARCH=arm64" >> $GITHUB_ENV
-        echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
-        echo "CC=clang" >> $GITHUB_ENV
-        echo "LD=ld.lld" >> $GITHUB_ENV
-
-    - name: Cache build files
-      uses: actions/cache@v3
-      with:
-        path: |
-          out
-        key: ${{ runner.os }}-kernel-${{ hashFiles('**/Makefile', '**/*.config') }}
-        restore-keys: |
-          ${{ runner.os }}-kernel-
-
     - name: Build defconfig
       run: |
-        make O=out zuma_defconfig
+        make O=out ARCH=arm64 LLVM=1 zuma_defconfig
 
     - name: Compile the kernel
       run: |
-        make O=out -j$(nproc) V=1 2>&1 | tee build.log
+        make O=out ARCH=arm64 LLVM=1 -j$(nproc) V=1 2>&1 | tee build.log
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
