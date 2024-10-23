@@ -36,6 +36,3 @@ WORKDIR /kernel
 
 # Copier le code source du noyau dans le conteneur
 COPY . /kernel
-
-# Exposer le point d'entrée
-ENTRYPOINT ["/bin/bash"]
