@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref }}
 
       - name: Build Docker image
         run: |
@@ -22,15 +20,19 @@ jobs:
 
       - name: Run Docker container and build kernel
         run: |
-          docker run -d --name kernel-build-container android-kernel-builder
+          docker run --name kernel-build-container \
+            -v ${{ github.workspace }}:/kernel \
+            -w /kernel \
+            android-kernel-builder \
+            /bin/bash -c "make O=out zuma_defconfig && make O=out -j\$(nproc) V=1 2>&1 | tee build.log"
 
-      - name: Display build logs
+      - name: Copy build log
         run: |
-          docker logs -f kernel-build-container
+          docker cp kernel-build-container:/kernel/build.log ${{ github.workspace }}
 
       - name: Copy artifacts from Docker container
         run: |
-          docker cp kernel-build-container:/artifacts ${{ github.workspace }}
+          docker cp kernel-build-container:/kernel/out/arch/arm64/boot/Image.gz-dtb ${{ github.workspace }}/
 
       - name: Remove Docker container
         run: |
@@ -40,4 +42,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Kernel
-          path: artifacts/*
+          path: |
+            Image.gz-dtb
+            build.log
