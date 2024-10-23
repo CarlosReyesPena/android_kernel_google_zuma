@@ -2,9 +2,9 @@ name: Build Android Kernel
 
 on:
   push:
-    branches: [ 'android-15.0.0-sultan' ]
+    branches: [ '15.0.0-sultan' ]
   pull_request:
-    branches: [ 'android-15.0.0-sultan' ]
+    branches: [ '15.0.0-sultan' ]
 
 jobs:
   build:
