@@ -20,19 +20,11 @@ jobs:
 
       - name: Run Docker container and build kernel
         run: |
-          docker run --name kernel-build-container \
-            -v ${{ github.workspace }}:/kernel \
-            -w /kernel \
-            android-kernel-builder \
-            /bin/bash -c "make O=out zuma_defconfig && make O=out -j\$(nproc) V=1 2>&1 | tee build.log"
+          docker run --name kernel-build-container android-kernel-builder
 
-      - name: Copy build log
+      - name: Copy build artifacts
         run: |
-          docker cp kernel-build-container:/kernel/build.log ${{ github.workspace }}
-
-      - name: Copy artifacts from Docker container
-        run: |
-          docker cp kernel-build-container:/kernel/out/arch/arm64/boot/Image.gz-dtb ${{ github.workspace }}/
+          docker cp kernel-build-container:/kernel/out Image.gz-dtb
 
       - name: Remove Docker container
         run: |
@@ -44,4 +36,6 @@ jobs:
           name: Kernel
           path: |
             Image.gz-dtb
-            build.log
+            out/**/*.ko
+            out/vmlinux
+            out/System.map
