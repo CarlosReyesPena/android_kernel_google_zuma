@@ -64,7 +64,7 @@ jobs:
     # Create GitHub Release using gh CLI
     - name: Create GitHub Release
       run: |
-        REPO_OWNER="TheWildJames"
+        REPO_OWNER="CarlosReyesPena"
         REPO_NAME="android_kernel_google_zuma"
         TAG_NAME="v$(date +'%Y.%m.%d-%H%M%S')"   # Unique tag with timestamp
         RELEASE_NAME="Sultan With KernelSU"
