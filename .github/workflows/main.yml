@@ -35,7 +35,7 @@ jobs:
 
         # Clone repositories into the root folder for the specified branch
         echo "Cloning repositories..."
-        git clone --recursive https://github.com/TheWildJames/android_kernel_google_zuma.git -b 15.0.0-sultan
+        git clone --recursive https://github.com/CarlosReyesPena/android_kernel_google_zuma.git -b V
         git clone https://github.com/TheWildJames/AnyKernel3.git -b 15.0.0-sultan
 
         # Compile the kernel
