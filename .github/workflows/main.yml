@@ -1,0 +1,78 @@
+name: Build and Release Kernel
+
+on:
+  workflow_dispatch:  # Trigger manually
+
+jobs:
+  build_kernel:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step to maximize build disk space
+    - name: Maximize build disk space
+      uses: easimon/maximize-build-space@v10
+
+    # Checkout the repository
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # Install dependencies, including lz4 and other build tools
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git lz4 zip
+
+    # Run the build script for the hardcoded branch 15.0.0-sultan
+    - name: Run Kernel Build Script
+      run: |
+        set -e # Fail the workflow if any command fails
+
+        # Create the root folder with the current date and time (AM/PM)
+        ROOT_DIR="A15-SultanSU-$(date +'%Y-%m-%d-%I-%M-%p')-release"
+        echo "Creating root folder $ROOT_DIR..."
+        mkdir -p "$ROOT_DIR"
+        cd "$ROOT_DIR"
+
+        # Clone repositories into the root folder for the specified branch
+        echo "Cloning repositories..."
+        git clone --recursive https://github.com/TheWildJames/android_kernel_google_zuma.git -b 15.0.0-sultan
+        git clone https://github.com/TheWildJames/AnyKernel3.git -b 15.0.0-sultan
+
+        # Compile the kernel
+        echo "Compiling the kernel..."
+        cd ./android_kernel_google_zuma
+        make zuma_defconfig
+        make -j$(nproc)
+
+        # Copy Image.lz4 and concatenate DTB files
+        echo "Copying Image.lz4 and concatenating DTB files..."
+        cp ./out/arch/arm64/boot/Image.lz4 ../AnyKernel3/Image.lz4
+        cat ./out/google-modules/soc/gs/arch/arm64/boot/dts/google/*.dtb > ../AnyKernel3/dtb
+
+        # Navigate to the AnyKernel3 directory
+        echo "Navigating to AnyKernel3 directory..."
+        cd ../AnyKernel3
+
+        # Zip the files with a new naming convention
+        ZIP_NAME="A15_Sultan_KernelSU_$(date +'%Y_%m_%d_%H_%M_%S').zip"
+        echo "Creating zip file $ZIP_NAME..."
+        zip -r "../$ZIP_NAME" ./*
+
+        # Move back to the root directory
+        cd ..
+
+    # Create GitHub Release using gh CLI
+    - name: Create GitHub Release
+      run: |
+        REPO_OWNER="TheWildJames"
+        REPO_NAME="android_kernel_google_zuma"
+        TAG_NAME="v$(date +'%Y.%m.%d-%H%M%S')"   # Unique tag with timestamp
+        RELEASE_NAME="Sultan With KernelSU"
+
+        echo "Creating GitHub release for $RELEASE_NAME..."
+        gh release create "$TAG_NAME" "$ROOT_DIR/$ZIP_NAME" \
+          --repo "$REPO_OWNER/$REPO_NAME" \
+          --title "$RELEASE_NAME" \
+          --notes "Kernel release for 15.0.0-sultan"
+
+        echo "GitHub release created and zip file uploaded."
